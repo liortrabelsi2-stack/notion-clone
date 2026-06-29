@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notion Clone</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#1a1a1a;height:100vh;display:flex;overflow:hidden}
+    #sidebar{width:250px;min-width:250px;background:#f7f7f5;border-right:1px solid #e5e5e3;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+    #sidebar-header{padding:20px 16px 12px;border-bottom:1px solid #e5e5e3}
+    #app-title{font-size:15px;font-weight:700}
+    #btn-new-page{margin-top:10px;width:100%;padding:7px 10px;background:#2f2f2f;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;text-align:left;transition:background .15s}
+    #btn-new-page:hover{background:#111}
+    #pages-list{flex:1;overflow-y:auto;padding:8px}
+    .page-item{display:flex;align-items:center;gap:4px;padding:5px 8px;border-radius:6px;cursor:pointer;transition:background .1s}
+    .page-item:hover{background:#ebebea}
+    .page-item.active{background:#e3e3e0}
+    .page-item-name{flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#37352f}
+    .page-item.active .page-item-name{font-weight:600}
+    .page-item-actions{display:none;gap:2px}
+    .page-item:hover .page-item-actions{display:flex}
+    .page-item-actions button{background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:4px;font-size:12px;color:#888;transition:background .1s,color .1s}
+    .page-item-actions button:hover{background:#d9d9d6;color:#333}
+    #sidebar-empty{padding:16px;font-size:12px;color:#aaa;display:none}
+    #editor{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+    #editor-toolbar{display:flex;align-items:center;justify-content:flex-end;padding:12px 24px;border-bottom:1px solid #e5e5e3;gap:12px;min-height:52px;flex-shrink:0}
+    #save-status{font-size:12px;color:#aaa}
+    #btn-export{padding:6px 14px;background:#fff;border:1px solid #e5e5e3;border-radius:6px;font-size:13px;cursor:pointer;color:#37352f;transition:background .1s,border-color .1s}
+    #btn-export:hover{background:#f7f7f5;border-color:#ccc}
+    #editor-content{flex:1;overflow-y:auto;padding:40px 80px 80px;max-width:900px;width:100%;margin:0 auto;display:none}
+    #page-title{width:100%;border:none;outline:none;font-size:36px;font-weight:700;color:#1a1a1a;margin-bottom:24px;background:transparent;resize:none;line-height:1.2;letter-spacing:-.5px;overflow:hidden}
+    #page-title::placeholder{color:#c7c5c0}
+    #blocks-container{display:flex;flex-direction:column;gap:2px}
+    .block-wrapper{position:relative;display:flex;align-items:flex-start;gap:8px;padding:2px 0;border-radius:4px;transition:background .1s}
+    .block-wrapper:hover{background:#f7f7f5}
+    .block-wrapper.drag-over{border-top:2px solid #2383e2;background:#eaf3fc}
+    .block-drag-handle{opacity:0;cursor:grab;padding:4px;color:#ccc;font-size:14px;line-height:1.6;user-select:none;transition:opacity .1s;flex-shrink:0}
+    .block-wrapper:hover .block-drag-handle{opacity:1}
+    .block-drag-handle:active{cursor:grabbing}
+    .block-content{flex:1;min-width:0}
+    .block-input{width:100%;border:none;outline:none;background:transparent;font-family:inherit;color:#1a1a1a;resize:none;line-height:1.6;overflow:hidden}
+    .block-input::placeholder{color:#c7c5c0}
+    .block-h1 .block-input{font-size:28px;font-weight:700;letter-spacing:-.3px}
+    .block-h2 .block-input{font-size:22px;font-weight:600;letter-spacing:-.2px}
+    .block-text .block-input{font-size:15px;line-height:1.7;color:#37352f}
+    .block-todo .block-content-inner{display:flex;align-items:flex-start;gap:8px}
+    .block-todo input[type=checkbox]{margin-top:4px;width:16px;height:16px;cursor:pointer;accent-color:#2383e2;flex-shrink:0}
+    .block-todo .block-input{font-size:15px}
+    .block-todo.checked .block-input{text-decoration:line-through;color:#aaa}
+    .block-code{border-radius:8px;overflow:hidden}
+    .block-code pre{margin:0;cursor:pointer;position:relative}
+    .block-code:not(.editing) pre:hover::after{content:'✎ éditer';position:absolute;top:10px;right:12px;font-size:11px;color:#aaa;font-family:sans-serif;pointer-events:none}
+    .block-code pre code{font-size:13px;line-height:1.6;border-radius:0!important}
+    .block-code textarea{display:none;width:100%;background:#1e1e1e;color:#d4d4d4;border:none;outline:none;font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;line-height:1.6;padding:16px;resize:none;min-height:80px}
+    .block-code.editing pre{display:none}
+    .block-code.editing textarea{display:block}
+    #slash-menu{position:fixed;display:none;background:#fff;border:1px solid #e5e5e3;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);width:200px;z-index:1000;overflow:hidden}
+    .slash-menu-item{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13px;cursor:pointer;color:#37352f;transition:background .1s}
+    .slash-menu-item:hover,.slash-menu-item.selected{background:#f0f0ee}
+    .slash-menu-icon{font-size:15px;width:22px;text-align:center}
+    #empty-state{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#aaa;gap:12px}
+    #empty-state p{font-size:15px}
+    #empty-state button{padding:8px 20px;background:#2f2f2f;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer}
+    #empty-state button:hover{background:#111}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);display:none;align-items:center;justify-content:center;z-index:2000}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:#fff;border-radius:10px;padding:24px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+    .modal-box p{font-size:14px;color:#37352f;margin-bottom:12px;line-height:1.5}
+    .modal-box input{width:100%;border:1px solid #e5e5e3;border-radius:6px;padding:8px 10px;font-size:14px;outline:none;margin-bottom:16px;display:none}
+    .modal-box input:focus{border-color:#2383e2}
+    .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+    .modal-actions button{padding:6px 16px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #e5e5e3;background:#fff}
+    .modal-actions button:first-child:hover{background:#f7f7f5}
+    .modal-actions .btn-primary{background:#2f2f2f;color:#fff;border-color:#2f2f2f}
+    .modal-actions .btn-primary:hover{background:#111}
+    ::-webkit-scrollbar{width:6px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px}
+    ::-webkit-scrollbar-thumb:hover{background:#bbb}
+  </style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div id="sidebar-header">
+    <div id="app-title">Notion Clone</div>
+    <button id="btn-new-page">+ Nouvelle page</button>
+  </div>
+  <div id="pages-list">
+    <div id="sidebar-empty">Aucune page pour l'instant</div>
+  </div>
+</aside>
+
+<main id="editor">
+  <div id="editor-toolbar">
+    <span id="save-status">Sauvegarde OK</span>
+    <button id="btn-export">Exporter en Markdown</button>
+  </div>
+  <div id="empty-state">
+    <p>Aucune page selectionnee</p>
+    <button id="btn-empty-create">Creer ma premiere page</button>
+  </div>
+  <div id="editor-content">
+    <textarea id="page-title" placeholder="Sans titre" rows="1"></textarea>
+    <div id="blocks-container"></div>
+  </div>
+</main>
+
+<div id="slash-menu">
+  <div class="slash-menu-item" data-type="h1"><span class="slash-menu-icon">H1</span> Titre H1</div>
+  <div class="slash-menu-item" data-type="h2"><span class="slash-menu-icon">H2</span> Titre H2</div>
+  <div class="slash-menu-item" data-type="text"><span class="slash-menu-icon">T</span> Texte</div>
+  <div class="slash-menu-item" data-type="todo"><span class="slash-menu-icon">V</span> Todo</div>
+  <div class="slash-menu-item" data-type="code"><span class="slash-menu-icon">{}</span> Code</div>
+</div>
+
+<div id="modal" class="modal-overlay">
+  <div class="modal-box">
+    <p id="modal-message"></p>
+    <input id="modal-input" type="text" />
+    <div class="modal-actions">
+      <button id="modal-cancel">Annuler</button>
+      <button id="modal-confirm" class="btn-primary">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ── uid avec fallback HTTP ──
+  function uid() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  // ── Modal ──
+  function showModal(opts) {
+    var overlay  = document.getElementById('modal');
+    var msgEl    = document.getElementById('modal-message');
+    var inputEl  = document.getElementById('modal-input');
+    var btnOk    = document.getElementById('modal-confirm');
+    var btnCancel= document.getElementById('modal-cancel');
+    msgEl.textContent      = opts.message;
+    inputEl.style.display  = opts.withInput ? 'block' : 'none';
+    inputEl.value          = opts.withInput ? (opts.defaultValue || '') : '';
+    btnOk.textContent      = opts.confirmLabel || 'Confirmer';
+    overlay.classList.add('open');
+    if (opts.withInput) setTimeout(function(){ inputEl.focus(); inputEl.select(); }, 0);
+    function close() {
+      overlay.classList.remove('open');
+      btnOk.onclick = btnCancel.onclick = overlay.onclick = inputEl.onkeydown = null;
+    }
+    btnOk.onclick     = function(){ close(); opts.onConfirm(opts.withInput ? inputEl.value : true); };
+    btnCancel.onclick = close;
+    overlay.onclick   = function(e){ if (e.target === overlay) close(); };
+    inputEl.onkeydown = function(e){ if (e.key === 'Enter'){ e.preventDefault(); btnOk.click(); } if (e.key === 'Escape') close(); };
+  }
+
+  // ── Store ──
+  var STORAGE_KEY = 'notion_pages';
+  var ACTIVE_KEY  = 'notion_active_page';
+
+  function getPages() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch(e) { return []; }
+  }
+  function savePages(pages) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pages)); }
+    catch(e) { if (e.name === 'QuotaExceededError') setStatus('Stockage plein !'); }
+  }
+  function savePage(page) {
+    var pages = getPages();
+    var idx   = pages.findIndex(function(p){ return p.id === page.id; });
+    if (idx !== -1) { pages[idx] = page; savePages(pages); }
+  }
+
+  // ── Etat global ──
+  var currentPage = null;
+  var saveTimer   = null;
+
+  function setStatus(msg) { document.getElementById('save-status').textContent = msg; }
+
+  function flushSave() {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      if (currentPage) { savePage(currentPage); setStatus('Sauvegarde OK'); }
+    }
+  }
+
+  function onContentChange() {
+    setStatus('Modification...');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      if (currentPage) savePage(currentPage);
+      setStatus('Sauvegarde OK');
+      saveTimer = null;
+    }, 2000);
+  }
+
+  // ── Navigation ──
+  function openPage(id) {
+    flushSave();
+    localStorage.setItem(ACTIVE_KEY, id);
+    var pages = getPages();
+    currentPage = pages.find(function(p){ return p.id === id; }) || null;
+    renderSidebar();
+    renderEditor();
+  }
+
+  function createPage() {
+    flushSave();
+    var pages = getPages();
+    var p = { id: uid(), title: '', blocks: [{ id: uid(), type: 'text', content: '' }], createdAt: new Date().toISOString().slice(0,10) };
+    pages.push(p);
+    savePages(pages);
+    currentPage = p;
+    localStorage.setItem(ACTIVE_KEY, p.id);
+    renderSidebar();
+    renderEditor();
+    setTimeout(function(){ document.getElementById('page-title').focus(); }, 0);
+  }
+
+  function deletePage(id) {
+    if (currentPage && currentPage.id === id) { clearTimeout(saveTimer); saveTimer = null; currentPage = null; }
+    var pages = getPages().filter(function(p){ return p.id !== id; });
+    savePages(pages);
+    if (pages.length > 0) openPage(pages[pages.length - 1].id);
+    else { localStorage.removeItem(ACTIVE_KEY); renderSidebar(); renderEditor(); }
+  }
+
+  function renamePage(id, newTitle) {
+    var pages = getPages();
+    var page  = pages.find(function(p){ return p.id === id; });
+    if (!page) return;
+    page.title = newTitle.trim() || 'Sans titre';
+    savePages(pages);
+    if (currentPage && currentPage.id === id) currentPage.title = page.title;
+    renderSidebar();
+    if (localStorage.getItem(ACTIVE_KEY) === id) document.getElementById('page-title').value = page.title;
+  }
+
+  // ── Sidebar ──
+  function renderSidebar() {
+    var pages  = getPages();
+    var active = localStorage.getItem(ACTIVE_KEY);
+    var list   = document.getElementById('pages-list');
+    var empty  = document.getElementById('sidebar-empty');
+    list.querySelectorAll('.page-item').forEach(function(el){ el.remove(); });
+    if (pages.length === 0) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    pages.forEach(function(page){
+      var item = document.createElement('div');
+      item.className  = 'page-item' + (page.id === active ? ' active' : '');
+      item.dataset.id = page.id;
+      var name = document.createElement('span');
+      name.className   = 'page-item-name';
+      name.textContent = page.title || 'Sans titre';
+      var actions = document.createElement('div');
+      actions.className = 'page-item-actions';
+      var btnR = document.createElement('button');
+      btnR.title = 'Renommer'; btnR.textContent = 'R';
+      btnR.addEventListener('click', function(e){
+        e.stopPropagation();
+        showModal({ message: 'Nouveau nom :', withInput: true, defaultValue: page.title || 'Sans titre', confirmLabel: 'Renommer', onConfirm: function(val){ if (val.trim()) renamePage(page.id, val); } });
+      });
+      var btnD = document.createElement('button');
+      btnD.title = 'Supprimer'; btnD.textContent = 'X';
+      btnD.addEventListener('click', function(e){
+        e.stopPropagation();
+        showModal({ message: 'Supprimer "' + (page.title || 'Sans titre') + '" ?', confirmLabel: 'Supprimer', onConfirm: function(){ deletePage(page.id); } });
+      });
+      actions.append(btnR, btnD);
+      item.append(name, actions);
+      item.addEventListener('click', function(){ openPage(page.id); });
+      list.appendChild(item);
+    });
+  }
+
+  // ── Editeur ──
+  function renderEditor() {
+    var ec    = document.getElementById('editor-content');
+    var es    = document.getElementById('empty-state');
+    var title = document.getElementById('page-title');
+    if (!currentPage) { ec.style.display = 'none'; es.style.display = 'flex'; return; }
+    es.style.display = 'none'; ec.style.display = 'block';
+    title.value = currentPage.title || '';
+    requestAnimationFrame(function(){ autoResize(title); });
+    title.oninput = function(){
+      currentPage.title = title.value;
+      var el = document.querySelector('.page-item[data-id="' + currentPage.id + '"] .page-item-name');
+      if (el) el.textContent = currentPage.title || 'Sans titre';
+      onContentChange();
+    };
+    renderBlocks();
+  }
+
+  function renderBlocks() {
+    var container = document.getElementById('blocks-container');
+    container.innerHTML = '';
+    currentPage.blocks.forEach(function(block){
+      container.appendChild(createBlockEl(block));
+    });
+    // autoResize apres insertion DOM
+    container.querySelectorAll('textarea').forEach(autoResize);
+  }
+
+  function autoResize(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+
+  // ── Blocs ──
+  function createBlockEl(block) {
+    var wrapper = document.createElement('div');
+    wrapper.className  = 'block-wrapper block-' + block.type;
+    wrapper.dataset.id = block.id;
+    wrapper.draggable  = true;
+    var handle = document.createElement('span');
+    handle.className = 'block-drag-handle';
+    handle.textContent = '=';
+    handle.setAttribute('aria-label', 'Deplacer le bloc');
+    var content = document.createElement('div');
+    content.className = 'block-content';
+    if (block.type === 'code')      buildCodeBlock(block, content, wrapper);
+    else if (block.type === 'todo') buildTodoBlock(block, content, wrapper);
+    else                            buildTextBlock(block, content);
+    wrapper.append(handle, content);
+    attachDragListeners(wrapper);
+    return wrapper;
+  }
+
+  function buildTextBlock(block, content) {
+    var ph = { h1: 'Titre 1', h2: 'Titre 2', text: 'Ecris quelque chose...' };
+    var ta = document.createElement('textarea');
+    ta.className   = 'block-input';
+    ta.placeholder = ph[block.type] || '';
+    ta.rows        = 1;
+    ta.value       = block.content;
+    ta.setAttribute('aria-label', ph[block.type] || 'Bloc texte');
+    ta.addEventListener('input', function(){
+      autoResize(ta);
+      block.content = ta.value;
+      if (ta.value === '/') showSlashMenu(block.id, ta);
+      else hideSlashMenu();
+      onContentChange();
+    });
+    ta.addEventListener('keydown', function(e){
+      if (handleSlashKeydown(e, block)) return;
+      handleBlockKeydown(e, block, ta);
+    });
+    content.appendChild(ta);
+  }
+
+  function buildTodoBlock(block, content, wrapper) {
+    if (block.checked) wrapper.classList.add('checked');
+    var inner = document.createElement('div');
+    inner.className = 'block-content-inner';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = !!block.checked;
+    cb.addEventListener('change', function(){
+      block.checked = cb.checked;
+      wrapper.classList.toggle('checked', block.checked);
+      onContentChange();
+    });
+    var ta = document.createElement('textarea');
+    ta.className = 'block-input'; ta.placeholder = 'Tache...'; ta.rows = 1; ta.value = block.content;
+    ta.setAttribute('aria-label', 'Tache');
+    ta.addEventListener('input', function(){
+      autoResize(ta); block.content = ta.value;
+      if (ta.value === '/') showSlashMenu(block.id, ta);
+      else hideSlashMenu();
+      onContentChange();
+    });
+    ta.addEventListener('keydown', function(e){
+      if (handleSlashKeydown(e, block)) return;
+      handleBlockKeydown(e, block, ta);
+    });
+    inner.append(cb, ta);
+    content.appendChild(inner);
+  }
+
+  function buildCodeBlock(block, content, wrapper) {
+    var pre  = document.createElement('pre');
+    var code = document.createElement('code');
+    code.textContent = block.content;
+    hljs.highlightElement(code);
+    pre.appendChild(code);
+    var ta = document.createElement('textarea');
+    ta.value = block.content;
+    ta.setAttribute('aria-label', 'Bloc code');
+    pre.addEventListener('click', function(){ wrapper.classList.add('editing'); ta.focus(); });
+    ta.addEventListener('blur', function(){
+      wrapper.classList.remove('editing');
+      code.textContent = block.content;
+      delete code.dataset.highlighted; // reset hljs avant re-highlight
+      hljs.highlightElement(code);
+    });
+    ta.addEventListener('input', function(){ block.content = ta.value; onContentChange(); });
+    ta.addEventListener('keydown', function(e){
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var s = ta.selectionStart;
+        ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(ta.selectionEnd);
+        ta.selectionStart = ta.selectionEnd = s + 2;
+        block.content = ta.value; onContentChange();
+      }
+    });
+    content.append(pre, ta);
+  }
+
+  // ── Clavier ──
+  function handleBlockKeydown(e, block, ta) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addBlock('text', block.id); }
+    if (e.key === 'Backspace' && ta.value === '') { e.preventDefault(); deleteBlock(block.id); }
+  }
+
+  function addBlock(type, afterId) {
+    var nb  = { id: uid(), type: type, content: '', checked: false };
+    var idx = currentPage.blocks.findIndex(function(b){ return b.id === afterId; });
+    if (idx === -1) currentPage.blocks.push(nb);
+    else currentPage.blocks.splice(idx + 1, 0, nb);
+    savePage(currentPage); renderBlocks();
+    setTimeout(function(){
+      var el = document.querySelector('.block-wrapper[data-id="' + nb.id + '"] textarea');
+      if (el) el.focus();
+    }, 0);
+  }
+
+  function deleteBlock(blockId) {
+    var idx = currentPage.blocks.findIndex(function(b){ return b.id === blockId; });
+    if (idx === -1 || currentPage.blocks.length === 1) return;
+    currentPage.blocks.splice(idx, 1);
+    savePage(currentPage); renderBlocks();
+    var prev = currentPage.blocks[Math.max(0, idx - 1)];
+    setTimeout(function(){
+      var el = document.querySelector('.block-wrapper[data-id="' + prev.id + '"] textarea');
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    }, 0);
+  }
+
+  function updateBlockType(blockId, newType) {
+    var block = currentPage.blocks.find(function(b){ return b.id === blockId; });
+    if (!block) return;
+    block.content = block.content.replace('/', '');
+    block.type    = newType;
+    if (newType === 'todo') block.checked = false; else delete block.checked;
+    savePage(currentPage); renderBlocks();
+    setTimeout(function(){
+      var el = document.querySelector('.block-wrapper[data-id="' + blockId + '"] textarea');
+      if (el) el.focus();
+    }, 0);
+  }
+
+  // ── Slash menu ──
+  var slashBlockId = null;
+  var slashMenu    = document.getElementById('slash-menu');
+
+  function showSlashMenu(blockId, anchorEl) {
+    slashBlockId = blockId;
+    var rect = anchorEl.getBoundingClientRect();
+    slashMenu.style.top     = (rect.bottom + 4) + 'px';
+    slashMenu.style.left    = rect.left + 'px';
+    slashMenu.style.display = 'block';
+    slashMenu.querySelectorAll('.slash-menu-item').forEach(function(el){ el.classList.remove('selected'); });
+    slashMenu.querySelector('.slash-menu-item').classList.add('selected');
+  }
+
+  function hideSlashMenu() { slashMenu.style.display = 'none'; slashBlockId = null; }
+
+  function handleSlashKeydown(e, block) {
+    if (slashMenu.style.display !== 'block') return false;
+    var items = Array.from(slashMenu.querySelectorAll('.slash-menu-item'));
+    var cur   = slashMenu.querySelector('.slash-menu-item.selected');
+    var idx   = items.indexOf(cur);
+    if (e.key === 'ArrowDown') { e.preventDefault(); if(cur) cur.classList.remove('selected'); items[(idx + 1) % items.length].classList.add('selected'); return true; }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); if(cur) cur.classList.remove('selected'); items[(idx - 1 + items.length) % items.length].classList.add('selected'); return true; }
+    if (e.key === 'Enter')     { e.preventDefault(); var s = slashMenu.querySelector('.slash-menu-item.selected'); if (s) updateBlockType(block.id, s.dataset.type); hideSlashMenu(); return true; }
+    if (e.key === 'Escape')    { hideSlashMenu(); return true; }
+    return false;
+  }
+
+  slashMenu.querySelectorAll('.slash-menu-item').forEach(function(item){
+    item.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      if (slashBlockId) updateBlockType(slashBlockId, item.dataset.type);
+      hideSlashMenu();
+    });
+  });
+  document.addEventListener('click', function(e){ if (!slashMenu.contains(e.target)) hideSlashMenu(); });
+
+  // ── Drag & Drop ──
+  var draggedId = null;
+  function attachDragListeners(wrapper) {
+    wrapper.addEventListener('dragstart', function(e){ draggedId = wrapper.dataset.id; wrapper.style.opacity = '0.4'; e.dataTransfer.effectAllowed = 'move'; });
+    wrapper.addEventListener('dragend',   function(){ wrapper.style.opacity = '1'; draggedId = null; document.querySelectorAll('.block-wrapper').forEach(function(el){ el.classList.remove('drag-over'); }); });
+    wrapper.addEventListener('dragover',  function(e){ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (wrapper.dataset.id !== draggedId) { document.querySelectorAll('.block-wrapper').forEach(function(el){ el.classList.remove('drag-over'); }); wrapper.classList.add('drag-over'); } });
+    wrapper.addEventListener('dragleave', function(){ wrapper.classList.remove('drag-over'); });
+    wrapper.addEventListener('drop',      function(e){ e.preventDefault(); wrapper.classList.remove('drag-over'); if (draggedId && draggedId !== wrapper.dataset.id) reorderBlocks(draggedId, wrapper.dataset.id); });
+  }
+  function reorderBlocks(fromId, toId) {
+    var fi = currentPage.blocks.findIndex(function(b){ return b.id === fromId; });
+    var ti = currentPage.blocks.findIndex(function(b){ return b.id === toId; });
+    if (fi === -1 || ti === -1) return;
+    var moved = currentPage.blocks.splice(fi, 1)[0];
+    currentPage.blocks.splice(ti, 0, moved);
+    savePage(currentPage); renderBlocks();
+  }
+
+  // ── Export Markdown ──
+  function exportMarkdown() {
+    if (!currentPage) return;
+    flushSave();
+    var md = '# ' + (currentPage.title || 'Sans titre') + '\n\n';
+    currentPage.blocks.forEach(function(b){
+      if (b.type === 'h1')   md += '# '  + b.content + '\n\n';
+      if (b.type === 'h2')   md += '## ' + b.content + '\n\n';
+      if (b.type === 'text') md += b.content + '\n\n';
+      if (b.type === 'todo') md += '- [' + (b.checked ? 'x' : ' ') + '] ' + b.content + '\n';
+      if (b.type === 'code') md += '```\n' + b.content + '\n```\n\n';
+    });
+    var blob = new Blob([md], { type: 'text/markdown' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = (currentPage.title || 'page') + '.md';
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  // ── Ctrl+S ──
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); flushSave(); }
+  });
+
+  // ── Boutons ──
+  document.getElementById('btn-new-page').addEventListener('click', createPage);
+  document.getElementById('btn-empty-create').addEventListener('click', createPage);
+  document.getElementById('btn-export').addEventListener('click', exportMarkdown);
+
+  // ── Init ──
+  var savedId = localStorage.getItem(ACTIVE_KEY);
+  var pages   = getPages();
+  if (pages.length > 0) {
+    var id = (savedId && pages.find(function(p){ return p.id === savedId; })) ? savedId : pages[0].id;
+    currentPage = pages.find(function(p){ return p.id === id; });
+    localStorage.setItem(ACTIVE_KEY, id);
+  }
+  renderSidebar();
+  renderEditor();
+})();
+</script>
+</body>
+</html>
